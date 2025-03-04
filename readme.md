@@ -4,7 +4,7 @@ Author: 陈柏林
 
 Email: chenblin23@mail2.sysu.edu.cn
 
-GitHub Repository: 
+GitHub Repository: https://github.com/Jonacbl/TaxCalculator
 
 ### **简介**
 
