@@ -1,0 +1,1 @@
+typeSearchIndex = [{"p":"<Unnamed>","l":"Main"},{"p":"utils","l":"Menu"},{"p":"utils","l":"TaxInterface"},{"l":"所有类和接口","u":"allclasses-index.html"}];updateSearchResults();

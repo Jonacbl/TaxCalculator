@@ -1,0 +1,1 @@
+@javadoc -d docs src\Main.java src\utils\*.java
