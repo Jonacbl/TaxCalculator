@@ -1,117 +1,93 @@
 package utils;
 
+import java.util.Map;
+
 /**
- * TaxInterface 类用于管理个人所得税的计算和税率表的修改。
- * 它提供了计算个人所得税、修改税率、修改起征点以及打印税率表的功能。
+ * TaxInterface 是调用后端关于税率的一系列函数，并提供给前端调用接口API的中间件。
+ * 它提供读取个人所得税、写税率、写起征点以及读取税率表的功能。
  */
 public class TaxInterface {
-    private int threshold = 1600; // Tax exemption threshold
-    private double[] taxRate = {5.0, 10.0, 15.0, 20.0, 25.0}; // Tax rate table
-    private int[] taxBrackets = {0, 500, 2000, 5000, 20000}; // Tax bracket boundaries
+    private int threshold; // 个人所得税的起征点
+    private TaxTable taxtable; // 税率表对象
 
     /**
-     * 暂时未使用的默认构造函数
+     * 构造函数，初始化税率表，并设置默认的个税起征点为 1600。
      */
     public TaxInterface() {
-
+        taxtable = new TaxTable();
+        threshold = 1600;
     }
 
     /**
      * 获取指定税级的税率。
      *
-     * @param index 税级索引（从 0 开始）W
-     * @return 返回对应税级的税率，如果索引无效则返回 -1
+     * @param index 税级索引（从 0 开始）
+     * @return 对应税级的税率
+     * @throws ArrayIndexOutOfBoundsException 如果索引超出范围
      */
-    public double getTaxRate(int index) {
-        return (index >= 0 && index < taxRate.length) ? taxRate[index] : -1;
+    public double readTaxRate(int index) {
+        if (index < 0 || index >= taxtable.getTableNumber()) {
+            throw new ArrayIndexOutOfBoundsException("Input index is out of range: " + index);
+        }
+        return taxtable.getTaxRate(index);
     }
 
     /**
      * 获取当前的个税起征点。
      *
-     * @return 返回当前的个税起征点
+     * @return 当前的个税起征点
      */
-    public int getThreshold() {
+    public int readThreshold() {
         return threshold;
     }
 
     /**
      * 计算个人所得税。
      *
-     * @param salary 工资收入
-     * @return 返回计算后的个人所得税金额
+     * @param salary 工资收入（单位：元）
+     * @return 计算后的个人所得税金额（单位：元），如果收入低于起征点，则返回 0
      */
-    public double calculatePersonalTax(int salary) {
-        salary -= threshold; // Calculate taxable income
-        if (salary <= 0) {
-            return 0; // No tax if taxable income is less than or equal to 0
-        }
-
-        double tax = 0; // Initialize tax
-        for (int i = 1; i < taxBrackets.length; i++) {
-            if (salary > taxBrackets[i]) {
-                // Calculate tax for the current bracket
-                tax += (taxBrackets[i] - taxBrackets[i - 1]) * taxRate[i - 1] / 100.0;
-            } else {
-                // Calculate tax for the last applicable bracket
-                tax += (salary - taxBrackets[i - 1]) * taxRate[i - 1] / 100.0;
-                break;
-            }
-        }
-
-        // If income exceeds the highest bracket, calculate the additional tax
-        if (salary > taxBrackets[taxBrackets.length - 1]) {
-            tax += (salary - taxBrackets[taxBrackets.length - 1]) * taxRate[taxRate.length - 1] / 100.0;
-        }
-
-        return tax;
+    public double readPersonalTax(int salary) {
+        salary -= threshold; // 计算应纳税所得额
+        return (salary <= 0) ? 0 : taxtable.calculateAllTax(salary);
     }
 
     /**
      * 修改个税起征点。
      *
-     * @param _threshold 新的个税起征点
+     * @param newThreshold 新的个税起征点
+     * @throws IllegalArgumentException 起征点必须为非负数
      */
-    public void modifyThreshold(int _threshold) {
-        if (_threshold >= 0) {
-            threshold = _threshold;
-        } else {
-            System.out.println("Invalid threshold value. Threshold must be non-negative.");
+    public void writeThreshold(int newThreshold) {
+        if (newThreshold < 0) {
+            throw new IllegalArgumentException("Threshold must be non-negative");
         }
+        threshold = newThreshold;
     }
 
     /**
      * 修改指定税级的税率。
      *
      * @param index 税级索引（从 0 开始）
-     * @param rate  新的税率（0-100）
+     * @param rate  新的税率（百分比，范围 0-100）
+     * @throws ArrayIndexOutOfBoundsException 如果索引超出范围
      */
-    public void modifyRate(int index, double rate) {
-        if (index >= 0 && index < taxRate.length && rate >= 0.0 && rate <= 100.0) {
-            taxRate[index] = rate;
-        } else {
-            System.out.println("Invalid index or rate. Index must be within bounds, and rate must be in range: 0-100.");
+    public void writeRate(int index, double rate) {
+        if (index < 0 || index >= taxtable.getTableNumber()) {
+            throw new ArrayIndexOutOfBoundsException("Input index is out of range: " + index);
         }
+        if (rate < 0.0 || rate > 100.0) {
+            throw new IllegalArgumentException("Tax rate is out of range: " + rate);
+        }
+        taxtable.modifyRate(index, rate);
     }
 
     /**
-     * 打印税率表。
-     * 该方法会输出当前的税率表，显示每个税级的应纳税所得额区间和对应的税率。
+     * 获取税率表，包括各税级的边界和对应的税率。
+     *
+     * @return 包含 "taxRate"（税率数组）和 "taxBrackets"（税级边界数组）的 Map
      */
-    public void printTaxTable() {
-        System.out.println("------------------------------------------");
-        System.out.println("Tax Rate Table:");
-        System.out.println("Level\tTaxable Income Range\tTax Rate (%)");
-        for (int i = 0; i < taxRate.length; i++) {
-            if (i == 0) {
-                System.out.println((i + 1) + "\tUp to " + taxBrackets[i + 1] + "\t\t\t" + taxRate[i]);
-            } else if (i < taxRate.length - 1) {
-                System.out.println((i + 1) + "\t" + taxBrackets[i] + " - " + taxBrackets[i + 1] + "\t\t\t" + taxRate[i]);
-            } else {
-                System.out.println((i + 1) + "\tOver " + taxBrackets[i] + "\t\t\t" + taxRate[i]);
-            }
-        }
-        System.out.println("------------------------------------------");
+    public Map<String, Object> readTaxTable() {
+        return taxtable.getTaxTable();
     }
-
 }
